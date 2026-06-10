@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { resolveInvites } from "../utils/invites.js";
 
 // Creates a signed login token that proves who the user is.
 // The frontend stores this and sends it with every request.
@@ -15,7 +16,7 @@ function publicUser(user) {
     id: user._id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: user.role, // "admin" (org admin) or "member"
   };
 }
 
@@ -33,9 +34,17 @@ export async function register(req, res) {
       return res.status(400).json({ message: "That email is already registered." });
     }
 
-    const user = await User.create({ name, email, password });
-    const token = createToken(user._id);
+    // The very first person to register becomes the org admin so there's
+    // always someone who can set up spaces. (More admins can be added later.)
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? "admin" : "member";
 
+    const user = await User.create({ name, email, password, role });
+
+    // Apply any invites that were waiting for this email address.
+    await resolveInvites(user);
+
+    const token = createToken(user._id);
     res.status(201).json({ token, user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
@@ -57,6 +66,9 @@ export async function login(req, res) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
+    // Pick up any invites added since they last signed in.
+    await resolveInvites(user);
+
     const token = createToken(user._id);
     res.json({ token, user: publicUser(user) });
   } catch (err) {
@@ -67,5 +79,8 @@ export async function login(req, res) {
 // GET /api/auth/me  — return the currently logged-in user
 // (req.user is set by the auth middleware)
 export async function getMe(req, res) {
+  // Resolve invites here too, so a logged-in person who just got invited
+  // gains access on their next page refresh without re-logging in.
+  await resolveInvites(req.user);
   res.json({ user: publicUser(req.user) });
 }

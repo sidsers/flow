@@ -10,6 +10,8 @@ import projectRoutes from "./routes/projectRoutes.js";
 import issueRoutes from "./routes/issueRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import spaceRoutes from "./routes/spaceRoutes.js";
+import attachmentRoutes from "./routes/attachmentRoutes.js";
 
 // Load the secret values from the .env file.
 dotenv.config();
@@ -23,7 +25,8 @@ const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
 
 // Let the server understand JSON sent from the frontend.
-app.use(express.json());
+// The higher limit leaves room for image attachments (sent as data URLs).
+app.use(express.json({ limit: "6mb" }));
 
 // A simple health-check you can hit to confirm the API is alive.
 app.get("/api/health", (req, res) => {
@@ -36,6 +39,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/spaces", spaceRoutes);
+app.use("/api/attachments", attachmentRoutes);
 
 // ---- Serve the built React app (production) ----
 // When deployed, the frontend is built into client/dist. If that folder

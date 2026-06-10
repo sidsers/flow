@@ -48,7 +48,7 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>{isEditing ? `Edit ${issue.label}` : "New issue"}</h2>
+          <h2>{isEditing ? `Edit ${issue.label}` : "New task"}</h2>
           <button className="icon-btn" onClick={onClose}>
             ✕
           </button>
@@ -124,11 +124,12 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
             Cancel
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={busy}>
-            {busy ? "Saving…" : isEditing ? "Save changes" : "Create issue"}
+            {busy ? "Saving…" : isEditing ? "Save changes" : "Create task"}
           </button>
         </div>
 
-        {/* Comments only make sense on an issue that already exists. */}
+        {/* Images and comments only make sense on a task that exists. */}
+        {isEditing && <Attachments issueId={issue._id} />}
         {isEditing && <Comments issueId={issue._id} />}
       </div>
     </div>
@@ -233,6 +234,115 @@ function Comments({ issueId }) {
           {posting ? "…" : "Post"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Image attachments for a task: upload, preview as thumbnails, view full,
+// and delete your own.
+function Attachments({ issueId }) {
+  const { user } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState(null); // a dataUrl to show full-size
+
+  // Cap the original file at ~2.5MB so it stays under the server limit
+  // once encoded.
+  const MAX_BYTES = 2.5 * 1024 * 1024;
+
+  useEffect(() => {
+    data
+      .getAttachments(issueId)
+      .then(setItems)
+      .finally(() => setLoading(false));
+  }, [issueId]);
+
+  function onPick(e) {
+    setError("");
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setError("That image is too large (max ~2.5MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setBusy(true);
+      try {
+        const created = await data.createAttachment(
+          issueId,
+          reader.result,
+          file.name
+        );
+        setItems((prev) => [...prev, created]);
+      } catch (err) {
+        setError(err.response?.data?.message || "Upload failed.");
+      } finally {
+        setBusy(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function remove(id) {
+    await data.deleteAttachment(id);
+    setItems((prev) => prev.filter((a) => a._id !== id));
+  }
+
+  return (
+    <div className="attachments">
+      <div className="comments-head">
+        Images {items.length > 0 && `(${items.length})`}
+      </div>
+
+      {error && <div className="alert">{error}</div>}
+
+      {!loading && (
+        <div className="thumb-grid">
+          {items.map((a) => (
+            <div className="thumb" key={a._id}>
+              <img
+                src={a.dataUrl}
+                alt={a.filename}
+                onClick={() => setPreview(a.dataUrl)}
+              />
+              {a.uploadedBy?._id === user?.id && (
+                <button
+                  className="thumb-del"
+                  title="Delete image"
+                  onClick={() => remove(a._id)}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+
+          <label className="thumb-add">
+            {busy ? "Uploading…" : "+ Add image"}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onPick}
+              disabled={busy}
+              hidden
+            />
+          </label>
+        </div>
+      )}
+
+      {preview && (
+        <div className="lightbox" onClick={() => setPreview(null)}>
+          <img src={preview} alt="full size" />
+        </div>
+      )}
     </div>
   );
 }

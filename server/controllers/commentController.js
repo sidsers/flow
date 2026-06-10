@@ -1,4 +1,5 @@
 import Comment from "../models/Comment.js";
+import { canAccessIssue } from "../utils/access.js";
 
 // GET /api/comments?issue=ISSUE_ID — list comments on one issue
 export async function listComments(req, res) {
@@ -6,6 +7,9 @@ export async function listComments(req, res) {
     const { issue } = req.query;
     if (!issue) {
       return res.status(400).json({ message: "An issue id is required." });
+    }
+    if (!(await canAccessIssue(req.user, issue))) {
+      return res.status(403).json({ message: "You don't have access to this issue." });
     }
     const comments = await Comment.find({ issue })
       .populate("author", "name email")
@@ -22,6 +26,9 @@ export async function createComment(req, res) {
     const { issue, text } = req.body;
     if (!issue || !text || !text.trim()) {
       return res.status(400).json({ message: "Issue and text are required." });
+    }
+    if (!(await canAccessIssue(req.user, issue))) {
+      return res.status(403).json({ message: "You don't have access to this issue." });
     }
 
     const comment = await Comment.create({

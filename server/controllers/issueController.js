@@ -1,5 +1,6 @@
 import Issue from "../models/Issue.js";
 import Project from "../models/Project.js";
+import { canAccessProject, canAccessIssue } from "../utils/access.js";
 
 // A small helper to re-fetch an issue with its people filled in,
 // so the frontend gets names instead of raw IDs.
@@ -15,6 +16,9 @@ export async function listIssues(req, res) {
     const { project } = req.query;
     if (!project) {
       return res.status(400).json({ message: "A project id is required." });
+    }
+    if (!(await canAccessProject(req.user, project))) {
+      return res.status(403).json({ message: "You don't have access to this project." });
     }
 
     const issues = await populateIssue(
@@ -33,6 +37,9 @@ export async function createIssue(req, res) {
 
     if (!title || !project) {
       return res.status(400).json({ message: "Title and project are required." });
+    }
+    if (!(await canAccessProject(req.user, project))) {
+      return res.status(403).json({ message: "You don't have access to this project." });
     }
 
     const proj = await Project.findById(project);
@@ -66,6 +73,9 @@ export async function createIssue(req, res) {
 // PUT /api/issues/:id — update an issue (status, title, assignee, etc.)
 export async function updateIssue(req, res) {
   try {
+    if (!(await canAccessIssue(req.user, req.params.id))) {
+      return res.status(403).json({ message: "You don't have access to this issue." });
+    }
     const allowed = ["title", "description", "status", "priority", "assignee"];
     const updates = {};
     for (const field of allowed) {
@@ -90,6 +100,9 @@ export async function updateIssue(req, res) {
 // DELETE /api/issues/:id — delete an issue
 export async function deleteIssue(req, res) {
   try {
+    if (!(await canAccessIssue(req.user, req.params.id))) {
+      return res.status(403).json({ message: "You don't have access to this issue." });
+    }
     const issue = await Issue.findByIdAndDelete(req.params.id);
     if (!issue) {
       return res.status(404).json({ message: "Issue not found." });

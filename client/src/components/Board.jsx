@@ -62,7 +62,7 @@ export default function Board({ issues, onMove, onOpen }) {
 
             <div className="column-body">
               {colIssues.length === 0 && (
-                <div className="empty-card">Drop issues here</div>
+                <div className="empty-card">Drop tasks here</div>
               )}
 
               {colIssues.map((issue) => (

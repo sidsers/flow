@@ -3,6 +3,12 @@ import mongoose from "mongoose";
 // A Project is a container for issues — like a single board.
 const projectSchema = new mongoose.Schema(
   {
+    // Which space this project belongs to.
+    space: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Space",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
