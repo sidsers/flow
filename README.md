@@ -7,24 +7,11 @@ A simple internal issue tracker built with the MERN stack
 - Create an account / sign in / sign out
 - Secure login using tokens (JWT)
 - A clean dashboard shell with a placeholder Kanban board
-
-Phase 2 will add real projects, draggable issue cards, and assignments.
-
----
-
-## What you need to install once
-
-You only do these once on your computer. All free.
-
-1. **Node.js** — download the "LTS" version from https://nodejs.org and install it.
-   To check it worked, open a terminal and type: `node -v` (you should see a version number).
-2. **A MongoDB Atlas account** (the free database) — https://www.mongodb.com/cloud/atlas/register
-   - Create a free "M0" cluster.
-   - Click **Connect → Drivers** and copy the connection string. It looks like:
-     `mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxx.mongodb.net/`
-   - Under **Network Access**, click "Allow access from anywhere" (fine for now).
+- Add real projects, draggable issue cards, and assignments.
 
 ---
+
+
 
 ## How to run it (two terminals)
 
