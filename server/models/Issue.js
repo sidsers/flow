@@ -45,6 +45,15 @@ const issueSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // Dates — only org admins can set these.
+    startDate: {
+      type: Date,
+      default: null,
+    },
+    dueDate: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

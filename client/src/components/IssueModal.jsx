@@ -20,8 +20,12 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
   const [assignee, setAssignee] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const isEditing = Boolean(issue);
 
   useEffect(() => {
@@ -31,6 +35,8 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
       setPriority(issue.priority || "medium");
       setStatus(issue.status || "todo");
       setAssignee(issue.assignee?._id || "");
+      setStartDate(issue.startDate ? issue.startDate.slice(0, 10) : "");
+      setDueDate(issue.dueDate ? issue.dueDate.slice(0, 10) : "");
     }
   }, [issue]);
 
@@ -38,7 +44,12 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
     if (!title.trim()) return;
     setBusy(true);
     try {
-      await onSave({ title, description, priority, status, assignee });
+      const payload = { title, description, priority, status, assignee };
+      if (isAdmin) {
+        payload.startDate = startDate || null;
+        payload.dueDate = dueDate || null;
+      }
+      await onSave(payload);
     } finally {
       setBusy(false);
     }
@@ -112,6 +123,44 @@ export default function IssueModal({ issue, users, onSave, onDelete, onClose }) 
             ))}
           </select>
         </label>
+
+        {isAdmin && (
+          <div className="field-row">
+            <label className="field">
+              <span>Start date</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Due date</span>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
+
+        {!isAdmin && (issue?.startDate || issue?.dueDate) && (
+          <div className="field-row">
+            {issue.startDate && (
+              <label className="field">
+                <span>Start date</span>
+                <input type="date" value={issue.startDate.slice(0, 10)} disabled />
+              </label>
+            )}
+            {issue.dueDate && (
+              <label className="field">
+                <span>Due date</span>
+                <input type="date" value={issue.dueDate.slice(0, 10)} disabled />
+              </label>
+            )}
+          </div>
+        )}
 
         <div className="modal-foot">
           {isEditing && (

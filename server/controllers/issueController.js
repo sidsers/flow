@@ -33,7 +33,7 @@ export async function listIssues(req, res) {
 // POST /api/issues — create a new issue
 export async function createIssue(req, res) {
   try {
-    const { title, description, priority, status, project, assignee } = req.body;
+    const { title, description, priority, status, project, assignee, startDate, dueDate } = req.body;
 
     if (!title || !project) {
       return res.status(400).json({ message: "Title and project are required." });
@@ -52,7 +52,7 @@ export async function createIssue(req, res) {
     await proj.save();
     const label = `${proj.key}-${proj.issueCounter}`;
 
-    const issue = await Issue.create({
+    const issueData = {
       title,
       description: description || "",
       priority: priority || "medium",
@@ -61,7 +61,15 @@ export async function createIssue(req, res) {
       assignee: assignee || null,
       reporter: req.user._id,
       label,
-    });
+    };
+
+    // Only org admins can set dates.
+    if (req.user.role === "admin") {
+      if (startDate !== undefined) issueData.startDate = startDate || null;
+      if (dueDate !== undefined) issueData.dueDate = dueDate || null;
+    }
+
+    const issue = await Issue.create(issueData);
 
     const populated = await populateIssue(Issue.findById(issue._id));
     res.status(201).json(populated);
@@ -83,6 +91,12 @@ export async function updateIssue(req, res) {
     }
     // An empty assignee string means "unassigned".
     if (updates.assignee === "") updates.assignee = null;
+
+    // Only org admins can set dates.
+    if (req.user.role === "admin") {
+      if ("startDate" in req.body) updates.startDate = req.body.startDate || null;
+      if ("dueDate" in req.body) updates.dueDate = req.body.dueDate || null;
+    }
 
     const issue = await populateIssue(
       Issue.findByIdAndUpdate(req.params.id, updates, { new: true })
